@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     db_pool_size: int = 10
     db_max_overflow: int = 20
     db_echo: bool = False
+    # Dedicated database used by the test suite only. `tests/conftest.py`
+    # refuses to run unless the database name ends in "_test", so a
+    # misconfigured env can't wipe a real dev/prod database.
+    test_database_url: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/money_transfer_test"
+    )
 
     # --- Business rules ---
     default_currency: str = "USD"
