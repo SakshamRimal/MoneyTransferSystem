@@ -1,0 +1,77 @@
+# App + Postgres for local development and demos.
+#
+#   docker compose up --build            # db -> migrations -> app
+#   docker compose --profile test run --rm test   # run the test suite
+#
+# Configuration is injected via environment variables (12-factor). Values in
+# a local `.env` file are picked up by compose for ${...} interpolation only.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-money_transfer}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # One-shot: applies Alembic migrations, then exits.
+  migrate:
+    build:
+      context: .
+      target: base
+    command: ["alembic", "upgrade", "head"]
+    environment: &app-env
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-money_transfer}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-money_transfer}
+      TEST_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/money_transfer_test
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_JSON: ${LOG_JSON:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: base
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      <<: *app-env
+      APP_ENV: ${APP_ENV:-local}
+      DEBUG: ${DEBUG:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Opt-in test runner: docker compose --profile test run --rm test
+  test:
+    build:
+      context: .
+      target: dev
+    profiles: ["test"]
+    environment:
+      <<: *app-env
+      APP_ENV: test
+      LOG_LEVEL: WARNING
+    depends_on:
+      db:
+        condition: service_healthy
+    # Command comes from the dev stage's CMD in the Dockerfile.
+
+volumes:
+  postgres_data:

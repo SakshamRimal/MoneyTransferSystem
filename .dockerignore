@@ -1,0 +1,30 @@
+# Keep the build context small and never bake secrets into the image.
+.git
+.gitignore
+.venv
+venv
+env/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Secrets: configuration comes from the environment at runtime.
+.env
+.env.*
+!.env.example
+
+# Not needed inside the image.
+Dockerfile
+docker-compose.yml
+.dockerignore
+Makefile
+README.md
