@@ -53,7 +53,7 @@ def upgrade() -> None:
     sa.Column('idempotency_key', sa.String(length=255), nullable=True),
     sa.Column('description', sa.String(length=500), nullable=True),
     sa.Column('failure_reason', sa.String(length=255), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('clock_timestamp()'), nullable=False),
     sa.CheckConstraint('amount_minor_units > 0', name='ck_transfers_amount_positive'),
     sa.CheckConstraint('from_account_id != to_account_id', name='ck_transfers_distinct_accounts'),
     sa.ForeignKeyConstraint(['from_account_id'], ['accounts.id'], ),
@@ -72,7 +72,7 @@ def upgrade() -> None:
     sa.Column('balance_after_minor_units', sa.BigInteger(), nullable=False),
     sa.Column('currency', sa.String(length=3), nullable=False),
     sa.Column('counterparty_account_id', sa.UUID(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('clock_timestamp()'), nullable=False),
     sa.ForeignKeyConstraint(['account_id'], ['accounts.id'], ),
     sa.ForeignKeyConstraint(['transfer_id'], ['transfers.id'], ),
     sa.PrimaryKeyConstraint('id')

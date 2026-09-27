@@ -36,6 +36,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
+# `now()` in Postgres is the *transaction* timestamp, which would give every
+# row written in the same transaction an identical created_at and make the
+# paginated history ordering ambiguous. `clock_timestamp()` returns the real
+# wall-clock time at the moment each row is written, so insertion order is
+# preserved even within one transaction (which is what history pagination
+# and the `created_at DESC, id DESC` sort rely on).
+
 
 class TransferStatus(str, enum.Enum):
     COMPLETED = "completed"
@@ -77,7 +84,7 @@ class Transfer(Base):
     failure_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.clock_timestamp(), nullable=False
     )
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -107,7 +114,7 @@ class LedgerEntry(Base):
     counterparty_account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.clock_timestamp(), nullable=False
     )
 
     def __repr__(self) -> str:  # pragma: no cover
